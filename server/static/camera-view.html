@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>ESP32-CAM Custom YOLO Detection</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            margin: 0; 
+            padding: 20px; 
+            background-color: #f5f5f5; 
+        }
+        .container { 
+            max-width: 1400px; 
+            margin: 0 auto; 
+            background-color: white; 
+            border-radius: 10px; 
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1); 
+            padding: 20px; 
+        }
+        h1 { 
+            text-align: center; 
+            color: #333; 
+            margin-bottom: 30px; 
+        }
+        
+        .video-section {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        #video { 
+            max-width: 800px; 
+            width: 100%;
+            height: auto;
+            border: 3px solid #333; 
+            border-radius: 10px; 
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        }
+        
+        .stats { 
+            display: grid; 
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); 
+            gap: 20px; 
+            margin: 30px 0; 
+        }
+        .stat-box { 
+            padding: 20px; 
+            border: 1px solid #ddd; 
+            border-radius: 8px; 
+            text-align: center;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        .stat-box h2 { margin: 0 0 10px 0; font-size: 1.2em; }
+        .stat-box p { margin: 0; font-size: 1.5em; font-weight: bold; }
+        
+        .controls {
+            text-align: center;
+            margin: 30px 0;
+        }
+        button { 
+            padding: 12px 24px; 
+            margin: 5px; 
+            font-size: 16px; 
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        .btn-primary { background-color: #007bff; color: white; }
+        .btn-danger { background-color: #dc3545; color: white; }
+        .btn-success { background-color: #28a745; color: white; }
+        button:hover { opacity: 0.8; transform: translateY(-2px); }
+        
+        .info-section {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin: 30px 0;
+        }
+        
+        .class-list { 
+            padding: 20px; 
+            border: 1px solid #ddd; 
+            border-radius: 8px;
+            background-color: #f8f9fa;
+        }
+        .class-list h3 { margin-top: 0; color: #495057; }
+        
+        .detection-log { 
+            padding: 20px; 
+            border: 1px solid #ddd; 
+            border-radius: 8px;
+            background-color: #f8f9fa;
+        }
+        .detection-log h3 { margin-top: 0; color: #495057; }
+        #logContent {
+            max-height: 400px; 
+            overflow-y: auto; 
+            border: 1px solid #ccc;
+            padding: 10px;
+            background-color: white;
+            border-radius: 5px;
+        }
+        
+        .detected { 
+            border-color: #ff6b6b !important; 
+            animation: detectPulse 1s ease-out; 
+        }
+        @keyframes detectPulse { 
+            0% { transform: scale(1); box-shadow: 0 4px 8px rgba(0,0,0,0.2); } 
+            50% { transform: scale(1.02); box-shadow: 0 8px 16px rgba(255,107,107,0.5); } 
+            100% { transform: scale(1); box-shadow: 0 4px 8px rgba(0,0,0,0.2); } 
+        }
+        
+        .log-entry {
+            border-left: 3px solid #28a745;
+            padding-left: 10px;
+            margin-bottom: 8px;
+            background-color: #f8f9fa;
+            padding: 8px;
+            border-radius: 3px;
+        }
+        
+        .connection-status {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 10px 20px;
+            border-radius: 20px;
+            color: white;
+            font-weight: bold;
+            z-index: 1000;
+        }
+        .status-connected { background-color: #28a745; }
+        .status-disconnected { background-color: #dc3545; }
+        
+        @media (max-width: 768px) {
+            .info-section { grid-template-columns: 1fr; }
+            .stats { grid-template-columns: repeat(2, 1fr); }
+        }
+    </style>
+</head>
+<body>
+    <div class="connection-status" id="connectionStatus">연결 중...</div>
+    
+    <div class="container">
+        <h1>YOLO Object Detection</h1>
+        
+        <div class="video-section">
+            <canvas id="video" width="800" height="600"></canvas>
+        </div>
+        
+        <div class="stats">
+            <div class="stat-box">
+                <h2>Connection</h2>
+                <p id="status">Waiting...</p>
+            </div>
+            <div class="stat-box">
+                <h2>Frames</h2>
+                <p id="frameCount">0</p>
+            </div>
+            <div class="stat-box">
+                <h2>Detections</h2>
+                <p id="detectionCount">0</p>
+            </div>
+            <div class="stat-box">
+                <h2>Model</h2>
+                <p id="modelStatus">Loading...</p>
+            </div>
+        </div>
+        
+        <div class="controls">
+            <button class="btn-primary" onclick="getStats()">Refresh Stats</button>
+            <button class="btn-success" onclick="clearLogs()">Clear Logs</button>
+            <button class="btn-danger" onclick="clearDetections()">Clear Images</button>
+        </div>
+        
+        <div class="info-section">
+            <div class="class-list">
+                <h2>Detection Classes</h2>
+                <p id="classList">Loading classes...</p>
+                <div id="classDetails"></div>
+            </div>
+            
+            <div class="detection-log">
+                <h2>Detection Log</h2>
+                <div id="logContent">No detections yet...</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('video');
+        const ctx = canvas.getContext('2d');
+        const status = document.getElementById('status');
+        const frameCount = document.getElementById('frameCount');
+        const detectionCount = document.getElementById('detectionCount');
+        const modelStatus = document.getElementById('modelStatus');
+        const classList = document.getElementById('classList');
+        const classDetails = document.getElementById('classDetails');
+        const logContent = document.getElementById('logContent');
+        const connectionStatus = document.getElementById('connectionStatus');
+        
+        let frames = 0;
+        let detections = 0;
+        let ws = null;
+
+        // 서버 상태 가져오기
+        async function loadServerStatus() {
+            try {
+                const response = await fetch('/status');
+                const data = await response.json();
+                
+                modelStatus.textContent = data.model_loaded ? 'Loaded' : 'Not Loaded';
+                classList.textContent = data.class_names.length > 0 ? 
+                    data.class_names.join(', ') : 'No classes loaded';
+                
+                // 클래스 상세 정보
+                if (data.class_names.length > 0) {
+                    classDetails.innerHTML = `
+                        <small>Total Classes: ${data.class_names.length}</small><br>
+                        <small>Confidence: ${(data.confidence_threshold * 100).toFixed(1)}%</small><br>
+                        <small>IoU: ${(data.iou_threshold * 100).toFixed(1)}%</small>
+                    `;
+                }
+            } catch (error) {
+                console.error('Error loading server status:', error);
+                modelStatus.textContent = 'Error';
+            }
+        }
+
+        // 웹소켓 연결
+        function connectWebSocket() {
+            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const wsUrl = `${protocol}//${window.location.host}/ws_view`;
+            
+            ws = new WebSocket(wsUrl);
+            
+            ws.onopen = function(event) {
+                status.textContent = 'Connected';
+                connectionStatus.textContent = '연결됨';
+                connectionStatus.className = 'connection-status status-connected';
+                console.log('WebSocket connected');
+            };
+            
+            ws.onmessage = function(event) {
+                if (typeof event.data === 'string') {
+                    // 탐지 결과 메시지
+                    try {
+                        const data = JSON.parse(event.data);
+                        if (data.type === 'detection') {
+                            handleDetection(data);
+                        }
+                    } catch (error) {
+                        console.error('Error parsing detection data:', error);
+                    }
+                } else if (event.data instanceof Blob) {
+                    // 영상 프레임
+                    displayFrame(event.data);
+                }
+            };
+            
+            ws.onclose = function(event) {
+                status.textContent = 'Disconnected';
+                connectionStatus.textContent = '연결 끊어짐';
+                connectionStatus.className = 'connection-status status-disconnected';
+                console.log('WebSocket disconn

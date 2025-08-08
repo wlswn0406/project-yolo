@@ -1,0 +1,62 @@
+{
+    "python.defaultInterpreterPath": "C:/Users/SBA/miniconda3/envs/project/python.exe",
+    "python.terminal.activateEnvironment": true,
+
+    // conda 환경 자동 활성화
+    "python.terminal.activateEnvInCurrentTerminal": true,
+    
+    // 에디터 설정
+    "editor.tabSize": 4,
+    "editor.insertSpaces": true,
+    "editor.rulers": [88],
+    "files.trimTrailingWhitespace": true,
+    "files.insertFinalNewline": true,
+
+    // 린팅
+    "python.linting.enabled": true,
+    "python.linting.pylintEnabled": false,
+    "python.linting.flake8Enabled": true,
+    "python.linting.flake8Args": [
+        "--max-line-length=88",
+        "--extend-ignore=E203,W503"
+    ],
+    
+    // 타입 체킹 수준
+    "python.analysis.typeCheckingMode": "basic",
+
+    // import 문 자동 추가
+    "python.analysis.autoImportCompletions": true,
+    
+    // Python 모듈을 자동으로 찾아서 경로에 추가
+    "python.analysis.autoSearchPaths": true,
+
+    // 워크스페이스의 Python 파일들을 분석
+    "python.analysis.diagnosticMode": "workspace",
+
+    // Python 파일을 미리 인덱싱하여 성능 향상
+    "python.analysis.indexing": true,
+
+    // 타입 힌트 파일 폴더 지정
+    "python.analysis.stubPath": "./typings",
+    
+    // 테스팅 설정
+    "python.testing.autoTestDiscoverOnSaveEnabled": true,
+    "python.testing.pytestEnabled": true,
+    "python.testing.unittestEnabled": false,
+    
+    // 디버깅 설정
+    "python.terminal.executeInFileDir": true,
+    
+    // 에디터 자동완성
+    "editor.suggest.insertMode": "replace",
+    "editor.acceptSuggestionOnCommitCharacter": false,
+    "python.analysis.completeFunctionParens": true,
+    
+    // 특정 확장자 파일을 어떤 언어로 인식할지 지정
+    "files.associations": {
+        "*.py": "python"
+    },
+    
+    // 파일 자동 저장
+    "files.autoSave": "onFocusChange"
+}
