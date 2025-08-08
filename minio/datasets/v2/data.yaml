@@ -1,0 +1,16 @@
+# minio://ai-door-system/datasets/v2
+
+train: train/images
+val: val/images
+
+nc: 5
+names:
+  0: person
+  1: package
+  2: envelope       # 우편물
+  3: food_delivery  # 배달 음식
+  4: unknown        # 미분류
+
+version: "v2"
+created_date: "2025-08-05"
+parent_version: "v1"

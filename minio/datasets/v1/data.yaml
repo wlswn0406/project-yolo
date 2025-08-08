@@ -1,0 +1,13 @@
+# minio://ai-door-system/datasets/v1
+
+train: train/images
+val: val/images
+
+nc: 2
+names:
+  0: person
+  1: package
+
+version: "v1"
+created_date: "2025-08-05"
+parent_version: null
