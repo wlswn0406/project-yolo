@@ -1,0 +1,142 @@
+version: '3.8'
+
+services:
+
+  # MySQL 데이터베이스
+  mysql:
+    image: mysql:8.0
+    container_name: ai-door-mysql
+    ports:
+      - "3306:3306"
+    environment:
+      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD:-rootpassword}
+      - MYSQL_DATABASE=${MYSQL_DATABASE:-ai_door_system}
+      - MYSQL_USER=${MYSQL_USER:-aidoor}
+      - MYSQL_PASSWORD=${MYSQL_PASSWORD:-password123}
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    restart: unless-stopped
+    networks:
+      - ai-door-network
+
+  # MinIO 스토리지
+  minio:
+    image: minio/minio:latest
+    container_name: ai-door-minio
+    ports:
+      - "9000:9000"  # API
+      - "9001:9001"  # Console
+    environment:
+      - MINIO_ROOT_USER=${MINIO_ROOT_USER:-admin}
+      - MINIO_ROOT_PASSWORD=${MINIO_ROOT_PASSWORD:-password123}
+    volumes:
+      - minio_data:/data
+    command: server /data --console-address ":9001"
+    restart: unless-stopped
+    networks:
+      - ai-door-network
+
+  # Backend 서버
+  server:
+    build: ./server
+    container_name: ai-door-server
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./storage:/app/storage
+      - ./server/models:/app/models
+    env_file:
+      - ./.env        
+      - ./server/.env
+    environment:
+      # Docker Compose에서 공통 변수 주입
+      - DATABASE_URL=mysql+pymysql://${MYSQL_USER}:${MYSQL_PASSWORD}@mysql:3306/${MYSQL_DATABASE}
+      - MINIO_ENDPOINT=minio:9000
+      - MINIO_ACCESS_KEY=${MINIO_ROOT_USER}
+      - MINIO_SECRET_KEY=${MINIO_ROOT_PASSWORD}
+      - REDIS_URL=redis://redis:6379
+    restart: unless-stopped
+    depends_on:
+      - mysql
+      - minio
+    networks:
+      - ai-door-network
+    
+  # 프론트엔드 대시보드
+  dashboard:
+    build: ./dashboard
+    container_name: ai-door-dashboard
+    ports:
+      - "3000:3000"
+    environment:
+      - REACT_APP_API_URL=http://server:8000
+      - REACT_APP_MINIO_URL=http://localhost:9000
+    restart: unless-stopped
+    depends_on:
+      - server
+    networks:
+      - ai-door-network
+
+  # ML 모델 학습 (필요시에만 실행)
+  ml-training:
+    build: ./ml_training
+    container_name: ai-door-ml-training
+    volumes:
+      - ./storage:/app/storage
+      - ./server/models:/app/deploy_models
+      - ./ml_training/data:/app/data
+      - ./storage/models:/app/models
+      - ./ml_training/runs:/app/runs
+    env_file:
+      - ./.env
+      - ./ml_training/.env
+    environment:
+      - MINIO_ENDPOINT=minio:9000
+      - MINIO_ACCESS_KEY=${MINIO_ROOT_USER}
+      - MINIO_SECRET_KEY=${MINIO_ROOT_PASSWORD}
+    profiles:
+      - training  # docker-compose --profile training up ml-training
+    depends_on:
+      - minio
+    networks:
+      - ai-door-network
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]  # GPU 지원
+
+  # Nginx 리버스 프록시
+  nginx:
+    image: nginx:alpine
+    container_name: ai-door-nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      - server
+      - dashboard
+      - minio
+    restart: unless-stopped
+    networks:
+      - ai-door-network
+
+
+# 네트워크
+networks:
+  ai-door-network:
+    driver: bridge
+
+# 볼륨
+volumes:
+  mysql_data:
+    driver: local
+  minio_data:
+    driver: local
+  redis_data:
+    driver: local
