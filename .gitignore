@@ -1,0 +1,14 @@
+.env
+!.env.ex
+
+logs
+*.log
+
+__pycache__/
+*.py[cod]
+*$py.class
+
+runs
+yolo11s.pt
+
+mc.exe
