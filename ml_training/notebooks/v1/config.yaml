@@ -1,0 +1,37 @@
+# 모델 설정 파일
+
+training:
+  model_name: "package-detection"
+  version: "v1.0.0"
+  
+  # 이미지 설정
+  imgsz: 320
+  epochs: 30
+  batch: 4
+  
+  # 학습률 설정
+  lr0: 0.001             # 초기 학습률
+  
+  # Early stopping
+  patience: 5            # 에포크 개선 없으면 중단
+  save_period: 5         # 에포크마다 저장
+  
+  # 시스템 설정
+  cache: False
+  workers: 2             # CPU 코어 수에 맞게 조정
+  
+  # 옵티마이저 설정
+  optimizer: 'SGD'       # SGD, Adam, AdamW
+  weight_decay: 0.0005
+  warmup_epochs: 1
+  warmup_momentum: 0.8
+  warmup_bias_lr: 0.1
+  
+  # 검증 설정
+  val: True
+  split: 0.2            # 20% 검증용
+  
+  # 기타
+  plots: False
+  save: True
+  verbose: True
